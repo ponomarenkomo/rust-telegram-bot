@@ -2,10 +2,9 @@ const Axios = require("axios");
 const Fs = require("fs");
 const Path = require("path");
 
-const steamId = "76561198273818482";
 const STEAM_PROFILES_URL = "https://steamcommunity.com/profiles/";
 
-const url = `https://steamcommunity.com/profiles/${steamId}`;
+
 
 function decodeHtml(str) {
   const htmlReservedSymbols = JSON.parse(
@@ -22,7 +21,8 @@ function decodeHtml(str) {
   return str;
 }
 
-async function scrapeSteamProfileName() {
+async function scrapeSteamProfileName(steamId) {
+  const url = `https://steamcommunity.com/profiles/${steamId}`;
   const response = await Axios.get(url);
 
   if (response.status !== 200) {
@@ -39,9 +39,5 @@ async function scrapeSteamProfileName() {
   return null;
 }
 
-async function main() {
-  const name = await scrapeSteamProfileName();
-  console.log("Steam name:", name);
-}
+module.exports = { scrapeSteamProfileName };
 
-main();
