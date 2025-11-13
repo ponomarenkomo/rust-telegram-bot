@@ -1,25 +1,27 @@
 {
-    "name": "rust-bot",
-    "version": "1.0.0",
-    "description": "A Telegram bot built with Node.js",
-    "main": "index.js",
-    "scripts": {
-        "start": "node index.js",
-        "dev": "nodemon index.js"
-    },
-    "keywords": [
-        "telegram",
-        "bot",
-        "nodejs"
-    ],
-    "author": "",
-    "license": "MIT",
-    "dependencies": {
-        "@liamcottle/rustplus.js": "^2.5.0",
-        "dotenv": "^16.3.1",
-        "node-telegram-bot-api": "^0.64.0"
-    },
-    "devDependencies": {
-        "nodemon": "^3.1.10"
-    }
+  "name": "rust-bot",
+  "version": "1.0.0",
+  "description": "A Telegram bot built with Node.js",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "keywords": [
+    "telegram",
+    "bot",
+    "nodejs"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@liamcottle/rustplus.js": "^2.5.0",
+    "axios": "^1.13.2",
+    "cheerio": "^1.1.2",
+    "dotenv": "^16.3.1",
+    "node-telegram-bot-api": "^0.64.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
 }
