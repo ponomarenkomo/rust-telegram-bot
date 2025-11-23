@@ -4,8 +4,6 @@ const Path = require("path");
 
 const STEAM_PROFILES_URL = "https://steamcommunity.com/profiles/";
 
-
-
 function decodeHtml(str) {
   const htmlReservedSymbols = JSON.parse(
     Fs.readFileSync(
@@ -21,23 +19,76 @@ function decodeHtml(str) {
   return str;
 }
 
-async function scrapeSteamProfileName(steamId) {
-  const url = `https://steamcommunity.com/profiles/${steamId}`;
-  const response = await Axios.get(url);
-
-  if (response.status !== 200) {
-    console.log("error");
-    return null;
+async function resolveSteamId(input) {
+  // If it's a full URL → extract last part
+  if (input.includes("steamcommunity.com")) {
+    const match = input.match(/\/(id|profiles)\/([^\/]+)/);
+    if (!match) return null;
+    input = match[2];
   }
 
-  let regex = new RegExp(`class="actual_persona_name">(.+?)</span>`, "gm");
-  let data = regex.exec(response.data);
-  if (data) {
-    return decodeHtml(data[1]);
+  // If it’s already a SteamID64 → return it
+  if (/^\d{17}$/.test(input)) {
+    return input;
   }
 
-  return null;
+  // Otherwise treat as vanity name
+  const res = await Axios.get(
+    "https://api.steampowered.com/ISteamUser/ResolveVanityURL/v1/",
+    {
+      params: {
+        key: process.env.STEAM_API_TOKEN,
+        vanityurl: input,
+      },
+    }
+  );
+
+  if (res.data.response.success !== 1) {
+    throw new Error("Could not resolve vanity URL");
+  }
+
+  return res.data.response.steamid;
 }
 
-module.exports = { scrapeSteamProfileName };
+async function getSteamProfileInfo(input) {
+  const steamId = await resolveSteamId(input);
+  const summary = await Axios.get(
+    "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/",
+    {
+      params: {
+        key: process.env.STEAM_API_TOKEN,
+        steamids: steamId,
+      },
+    }
+  );
 
+  const player = summary.data.response.players[0];
+  if (!player) return null;
+
+  // 2. Get playtime
+  const games = await Axios.get(
+    "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/",
+    {
+      params: {
+        key: process.env.STEAM_API_TOKEN,
+        steamid: steamId,
+        include_played_free_games: true,
+      },
+    }
+  );
+
+  // Rust app id
+  const rust = games.data.response.games?.find((g) => g.appid === 252490);
+  const rustHours = rust ? (rust.playtime_forever / 60).toFixed(1) : 0;
+
+  return {
+    steamId,
+    name: player.personaname,
+    status: player.personastate,
+    inGame: player.gameextrainfo || null,
+    gameId: player.gameid || null,
+    rustHours,
+  };
+}
+
+module.exports = { getSteamProfileInfo };
