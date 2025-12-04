@@ -1,6 +1,6 @@
 const TelegramBot = require("node-telegram-bot-api");
 require("dotenv").config();
-const battlemetrics = require("./structures/Battlemetrics.js");
+const battlemetrics = require("./commands/Battlemetrics.js");
 const TeamManager = require("./commands/teamManager.js");
 
 const token = process.env.BOT_TOKEN;
@@ -53,7 +53,9 @@ bot.on("callback_query", async (callbackQuery) => {
       return;
     }
 
-    const text = team.players.map((id) => `• ${id}`).join("\n");
+    const text = team.players
+      .map((player) => `• ${player.name || player.steamId}`)
+      .join("\n");
 
     await bot.sendMessage(chatId, `Members of *${teamName}*:\n${text}`, {
       parse_mode: "Markdown",
@@ -136,8 +138,22 @@ bot.on("message", async (msg) => {
   // STEP 1 → waiting for steam ID
   if (state.step === "waiting_for_steam_id") {
     state.steamId = text.trim();
-    state.step = "waiting_for_team_name";
 
+    try {
+      const steamData = await battlemetrics.getSteamProfileInfo(state.steamId);
+      console.log("Fetched Steam profile:", steamData);
+
+      const Player = require("./structures/players.js");
+      const player = new Player(steamData);
+
+      player.update(steamData);
+
+      console.log("Player status", player);
+    } catch (err) {
+      console.error("Error fetching Steam name:", err);
+    }
+
+    state.step = "waiting_for_team_name";
     return bot.sendMessage(chatId, "Now enter the team name:");
   }
 
@@ -155,7 +171,7 @@ bot.on("message", async (msg) => {
     }
 
     // Add the user to the team
-    manager.addUserToTeam(teamName, state.steamId);
+    manager.addPlayerToTeam(teamName, state.steamId);
 
     await bot.sendMessage(
       chatId,
@@ -164,12 +180,6 @@ bot.on("message", async (msg) => {
     );
 
     // Optional: Steam profile fetch
-    try {
-      const steamName = await battlemetrics.getSteamProfileInfo(state.steamId);
-      console.log("Fetched Steam profile:", steamName);
-    } catch (err) {
-      console.error("Error fetching Steam name:", err);
-    }
 
     // Clear state
     userStates.delete(chatId);
